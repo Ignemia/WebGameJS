@@ -23,15 +23,18 @@ module.exports = (env) => {
                     exclude: /node_modules/,
                 },
                 {
-                    test: /\.scss$/,
-                    use: 'scss-loader',
-                    exclude: /node_modules/,
+                    test: /\.s[ac]ss$/i,
+                    use: [
+                        "style-loader",
+                        "css-loader",
+                        "sass-loader",
+                    ],
                 },
-                {
-                    test: /\.pug$/,
-                    use: 'pug-loader',
-                    exclude: /node_modules/,
-                },
+                // {
+                //     test: /\.pug$/,
+                //     use: 'pug-loader',
+                //     exclude: /node_modules/,
+                // },
             ],
         },
         resolve: {
