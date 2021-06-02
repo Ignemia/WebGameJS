@@ -113,14 +113,14 @@ export default class UpdateLoop {
         end: 0
     }
     #preloop: Node = new Node(() => {
+        this.#loopdata.end = performance.now();
+        this.updatePerformaceStats(this.#loopdata.end - this.#loopdata.start);
         this.#loopdata.start = performance.now();
     });
     #mainloop: Node = new Node(() => {
         // console.log("mainloop")
     });
     #finalloop: Node = new Node(() => {
-        this.#loopdata.end = performance.now();
-        this.updatePerformaceStats(this.#loopdata.end - this.#loopdata.start);
     });
     public end = false;
     public stats = {

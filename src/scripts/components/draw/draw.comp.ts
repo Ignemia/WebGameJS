@@ -1,19 +1,16 @@
-/* todo:    1. create canvas -> setup size (relative)
+/* todo:    1. create canvas -> setup size (relative) ✓
             2. setup styles
-            3. coordinate system ([-1,-1], [1,1]) -> from pixel input to coordinate input mapping
+            3. coordinate system ([0,0] is in the center of screen) -> from pixel input to coordinate input mapping ✓
             4. draw only visible
             5. Textures -> Sprites -> Shading
             ...
             final: optimizations for JIT
 */
 
-import {Color} from "./color/color.comp";
-import Point, {DrawSettings, Triangle} from "./geometry/geometry.comp";
+import {DrawSettings, Point, Shape2D, Vector} from "./geometry/geometry.comp";
 import $ from 'jquery';
 
 export const mainCanvas = generateCanvas();
-document.body.appendChild(mainCanvas);
-drawCoordinateSystem();
 
 function generateCanvas(): HTMLCanvasElement {
     const canvas = document.createElement("canvas");
@@ -24,7 +21,7 @@ function generateCanvas(): HTMLCanvasElement {
     return canvas;
 }
 
-function drawLine(from: Point, to: Point, ctx: CanvasRenderingContext2D, drawSettings?: DrawSettings) {
+export function drawLine(from: Point, to: Point, ctx: CanvasRenderingContext2D, drawSettings?: DrawSettings) {
     ctx.beginPath();
     ctx.moveTo(from.x, from.y);
     ctx.lineTo(to.x, to.y);
@@ -33,23 +30,26 @@ function drawLine(from: Point, to: Point, ctx: CanvasRenderingContext2D, drawSet
     ctx.stroke();
 }
 
-function drawCoordinateSystem() {
+export function drawCoordinateSystem() {
     const center = new Point([0, 0]);
     const ctx = mainCanvas.getContext('2d') as CanvasRenderingContext2D;
     drawLine(new Point([-center.x, 0]), new Point([center.x, 0]), ctx);
     drawLine(new Point([0, center.y]), new Point([0, -center.y]), ctx);
 }
 
+function clearCanvas(canvas: HTMLCanvasElement): void {
+    const ctx = canvas.getContext('2d') as CanvasRenderingContext2D;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    // console.log("cleared");
+}
 
-const tr = new Triangle(
-    [
-        new Point([0, 125]),
-        new Point([100, -75]),
-        new Point([-100, -75])
-    ], new Point([0, 0]), mainCanvas, {
-        fillColor: Color.PRESETS.PINK,
-        // drawEdgePoints: true,
-        // drawCentroid: true,
-        stroke: {color: Color.PRESETS.BLACK}
-    });
-tr.draw();
+function drawObjects(objects: Shape2D[]): void {
+    for (const o of objects) {
+        o.draw();
+    }
+}
+
+export function redraw(objects: Shape2D[]) {
+    clearCanvas(mainCanvas);
+    drawObjects(objects);
+}
