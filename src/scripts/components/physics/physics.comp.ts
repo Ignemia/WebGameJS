@@ -6,5 +6,7 @@
 //          Final: Explosions
 
 export const CONSTANTS = {
-    SpeedOfLight: 299792458, // meters per second
+    c: 299792458, // meters per second
+    g: 9.81, // m/s^2
+    G: 6.67430*(1/Math.pow(10, 11)),
 }
