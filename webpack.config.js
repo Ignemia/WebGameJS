@@ -1,5 +1,6 @@
 const path = require('path');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
+const TerserPlugin = require('terser-webpack-plugin');
 
 const envD = require('./src/config.dev.json');
 // const env = require('/src/config.deployment.json');
@@ -30,11 +31,11 @@ module.exports = (env) => {
                         "sass-loader",
                     ],
                 },
-                // {
-                //     test: /\.pug$/,
-                //     use: 'pug-loader',
-                //     exclude: /node_modules/,
-                // },
+                {
+                    test: /\.pug$/,
+                    use: 'pug-loader',
+                    exclude: /node_modules/,
+                },
             ],
         },
         resolve: {
@@ -48,6 +49,17 @@ module.exports = (env) => {
         output: {
             filename: 'page.js',
             path: path.resolve(__dirname, 'dist'),
+        },
+        optimization: {
+            minimize: true,
+            minimizer: [new TerserPlugin({
+                terserOptions: {
+                    ecma: "es5",
+                    parse: {},
+                    compress: {},
+                    mangle: true
+                }
+            })],
         },
     }
 };

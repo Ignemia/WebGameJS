@@ -503,7 +503,6 @@ export class Rectangle extends Shape2D {
     }
 }
 
-
 export class Square extends Rectangle {
     constructor(centroid: Point, private readonly side: number, protected readonly canvas: HTMLCanvasElement, drawSettings: DrawSettings) {
         super(centroid, {horizontal: side, vertical: side}, canvas, drawSettings);
