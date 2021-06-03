@@ -194,6 +194,9 @@ export abstract class Shape2D {
     }
 
     draw(): void {
+
+        if (this.offCanvas) return;
+
         this._rot_pts = this.getRotationPoints();
         this.square_edges = this.squareEdges();
 
@@ -215,8 +218,6 @@ export abstract class Shape2D {
         }
     }
 
-    abstract move({x, y, z}: { x: number, y: number, z?: number }): void;
-
     drawSquareEdges() {
         this.context.beginPath();
 
@@ -235,6 +236,12 @@ export abstract class Shape2D {
 
     protected abstract getRotationPoints(): Point[];
 
+    abstract get boudingEdges(): { left: number, right: number, top: number, bottom: number }
+
+    abstract get offCanvas(): boolean;
+
+    abstract move({x, y, z}: { x: number, y: number, z?: number }): void;
+
     abstract includesPoint(pt1: Point): boolean;
 
     abstract drawEdgePoints(): void;
@@ -243,9 +250,17 @@ export abstract class Shape2D {
 
     abstract overlaps(shape: Shape2D): boolean;
 
-    abstract squareEdges(): Array<Point>;
+    squareEdges(): Array<Point> {
+        return [
+            new Point([this.boudingEdges.left, this.boudingEdges.top]),
+            new Point([this.boudingEdges.right, this.boudingEdges.top]),
+            new Point([this.boudingEdges.right, this.boudingEdges.bottom]),
+            new Point([this.boudingEdges.left, this.boudingEdges.bottom]),
+        ]
 
+    }
 }
+
 
 export class Point {
 
@@ -328,6 +343,14 @@ export class Triangle extends Shape2D {
         this._rot_pts = this.points;
     }
 
+    get offCanvas(): boolean {
+        if (this.boudingEdges.right <= -this.canvas.width / 2) return true;
+        if (this.boudingEdges.left >= this.canvas.width / 2) return true;
+        if (this.boudingEdges.top <= -this.canvas.height / 2) return true;
+
+        return this.boudingEdges.bottom >= this.canvas.height / 2;
+    }
+
     protected getRotationPoints(): [Point, Point, Point] {
         const pts = [];
 
@@ -387,19 +410,14 @@ export class Triangle extends Shape2D {
         throw new Error('Method not implemented.');
     }
 
-    squareEdges(): Array<Point> {
+    get boudingEdges(): { left: number; right: number; top: number; bottom: number; } {
         const xVals = this._rot_pts.map(e => e.originalCoordinates.x);
         const yVals = this._rot_pts.map(e => e.originalCoordinates.y);
         const minx = _.min(xVals) as number;
         const maxx = _.max(xVals) as number;
         const miny = _.min(yVals) as number;
         const maxy = _.max(yVals) as number;
-        return [
-            new Point([minx, miny]),
-            new Point([minx, maxy]),
-            new Point([maxx, maxy]),
-            new Point([maxx, miny]),
-        ]
+        return {left: minx, right: maxx, top: maxy, bottom: miny};
     }
 
     move(s: { x: number, y: number, z?: number }) {
