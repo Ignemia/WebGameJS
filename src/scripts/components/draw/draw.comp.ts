@@ -37,7 +37,7 @@ export function drawCoordinateSystem() {
     drawLine(new Point([0, center.y]), new Point([0, -center.y]), ctx);
 }
 
-function clearCanvas(canvas: HTMLCanvasElement): void {
+export function clearCanvas(canvas: HTMLCanvasElement): void {
     const ctx = canvas.getContext('2d') as CanvasRenderingContext2D;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     // console.log("cleared");
@@ -50,6 +50,5 @@ function drawObjects(objects: Shape2D[]): void {
 }
 
 export function redraw(objects: Shape2D[]) {
-    clearCanvas(mainCanvas);
     drawObjects(objects);
 }

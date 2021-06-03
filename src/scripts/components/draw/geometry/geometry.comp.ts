@@ -127,6 +127,18 @@ export abstract class Shape2D {
     protected _rot_pts: Point[] = [];
 
     protected square_edges: Point[] = [];
+    protected speed = {
+        default: {
+            x: 0,
+            y: 0,
+            z: 0
+        },
+        changed: {
+            x: 0,
+            y: 0,
+            z: 0
+        }
+    }
 
     protected constructor(protected centroid: Point, protected readonly canvas: HTMLCanvasElement, drawSettings?: DrawSettings) {
         for (const key in drawSettings) {
@@ -138,9 +150,7 @@ export abstract class Shape2D {
     }
 
     set defaultRotation(rotation: number) {
-        this.rotation.default = (rotation/180) * Math.PI;
-        this._rot_pts = this.getRotationPoints();
-        this.square_edges = this.squareEdges();
+        this.rotation.default = (rotation / 180) * Math.PI;
     }
 
     set rotationSpeed(speed: number) {
@@ -151,17 +161,42 @@ export abstract class Shape2D {
         return this._rotationSpeed;
     }
 
+    set movementSpeed({x = 0, y = 0, z = 0}: { x: number, y: number, z?: number }) {
+        this.speed.changed = {x, y, z};
+    }
+
+    set movementDefaultSpeed({x = 0, y = 0, z = 0}: { x: number, y: number, z?: number }) {
+        this.speed.default = {x, y, z};
+    }
+
+    get movementSpeed(): { x: number, y: number, z: number } {
+        return {
+            x: this.speed.default.x + this.speed.changed.x,
+            y: this.speed.default.y + this.speed.changed.y,
+            z: this.speed.default.z + this.speed.changed.z
+        }
+    }
+
     rotateAnimationApply(pastTime: number) {
         this.rotate(pastTime * this.rotationSpeed);
     }
 
+    translationAnimationApply(pastTime: number) {
+        this.move({
+            x: this.movementSpeed.x * pastTime,
+            y: this.movementSpeed.y * pastTime,
+            z: this.movementSpeed.z * pastTime
+        });
+    }
+
     rotate(amount: number): void {
         this.rotation.added += amount;
-        this._rot_pts = this.getRotationPoints();
-        this.square_edges = this.squareEdges();
     }
 
     draw(): void {
+        this._rot_pts = this.getRotationPoints();
+        this.square_edges = this.squareEdges();
+
         this.drawShape();
         this.context.fillStyle = this.drawSettings.fillColor.hexCode;
         this.context.fill();
@@ -179,6 +214,8 @@ export abstract class Shape2D {
             this.centroid.draw(this.canvas);
         }
     }
+
+    abstract move({x, y, z}: { x: number, y: number, z?: number }): void;
 
     drawSquareEdges() {
         this.context.beginPath();
@@ -216,12 +253,18 @@ export class Point {
 
     #x: number = 0;
     #y: number = 0;
-    #z?: number;
+    #z: number = 1;
 
-    constructor(coordiantes: number[]) {
-        this.x = coordiantes[0];
-        this.y = coordiantes[1];
-        if (!_.isNil(coordiantes[2])) this.z = coordiantes[2];
+    constructor(coordinates: number[]) {
+        this.x = coordinates[0];
+        this.y = coordinates[1];
+        if (coordinates[2]) this.z = coordinates[2];
+    }
+
+    translate({x, y, z}: { x: number, y: number, z?: number }) {
+        this.#x += x;
+        this.#y += y;
+        if (this.#z && z) this.#z += z;
     }
 
     get originalCoordinates() {
@@ -357,6 +400,15 @@ export class Triangle extends Shape2D {
             new Point([maxx, maxy]),
             new Point([maxx, miny]),
         ]
+    }
+
+    move(s: { x: number, y: number, z?: number }) {
+        this.centroid.translate(s);
+        this.points.forEach((e) => {
+            e.translate(s);
+        });
+        this._rot_pts = this.getRotationPoints();
+        this.square_edges = this.squareEdges();
     }
 }
 

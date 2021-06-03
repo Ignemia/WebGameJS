@@ -1,5 +1,5 @@
 import UpdateLoop from './components/update-loop/update-loop.comp';
-import {drawCoordinateSystem, mainCanvas, redraw} from "./components/draw/draw.comp";
+import {clearCanvas, drawCoordinateSystem, mainCanvas, redraw} from "./components/draw/draw.comp";
 import {Color} from "./components/draw/color/color.comp";
 import Debugger from "./components/debbugger/debugger.comp";
 
@@ -29,10 +29,10 @@ class App {
     }
 
     #setup = () => {
-        for (let i = 0; i <= 100; i++) {
+        for (let i = 0; i <= 50; i++) {
             const centerCoordinates = [
-                Math.random() * this.#canvas.width - this.#canvas.width / 2,
-                Math.random() * this.#canvas.height - this.#canvas.height / 2
+                Math.random() * (this.#canvas.width-300) - (this.#canvas.width / 2-150),
+                Math.random() * (this.#canvas.height-300) - (this.#canvas.height / 2-150)
             ];
             const center = new Point(centerCoordinates);
             const mag = Math.random() * 50 + 50;
@@ -40,21 +40,28 @@ class App {
             const pt2 = new Point([centerCoordinates[0] + (3 / 4) * mag, centerCoordinates[1] - mag / 2]);
             const pt3 = new Point([centerCoordinates[0] - (3 / 4) * mag, centerCoordinates[1] - mag / 2]);
 
-            const tr = new Triangle([pt1, pt2, pt3], center, this.#canvas, {fillColor: Color.getRandom(), /*drawCentroid: true, drawEdgePoints:true*/});
-            tr.defaultRotation = Math.random()*180;
-            tr.rotationSpeed = Math.random()*180;
+            const tr = new Triangle([pt1, pt2, pt3], center, this.#canvas, {fillColor: Color.getRandom()});
+            tr.defaultRotation = Math.random() * 180;
+            tr.rotationSpeed = Math.random() * 30;
+
+            tr.movementDefaultSpeed = {
+                x: Math.random() * 100 - 50,
+                y: Math.random() * 100 - 50
+            }
+
 
             this.#objects.push(tr);
         }
     }
 
     #draw = () => {
-        redraw(this.#objects);
-        for(const obj of this.#objects) {
-            obj.rotateAnimationApply(this.#updateLoop.stats.lastFrameTime/1000);
-            // obj.drawSquareEdges();
-        }
+        clearCanvas(this.#canvas);
         // drawCoordinateSystem();
+        for (const obj of this.#objects) {
+            obj.rotateAnimationApply(this.#updateLoop.stats.lastFrameTime / 1000);
+            obj.translationAnimationApply(this.#updateLoop.stats.lastFrameTime / 1000);
+        }
+        redraw(this.#objects);
     }
 
     addToUpdateLoop(input: (...params: any[]) => any) {
