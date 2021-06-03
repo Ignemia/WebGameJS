@@ -10,7 +10,8 @@ export const default_drawSettings = Object.freeze({
     fillOpacity: 1,
     invisible: false,
     scale: 1,
-    stroke: {color: Color.PRESETS.NULL, opacity: 1, strength: 1}
+    stroke: {color: Color.PRESETS.NULL, opacity: 1, strength: 1},
+    drawBoundingBox: false
 });
 
 function getAngle(points: [Point, Point, Point]): number {
@@ -31,6 +32,7 @@ export type DrawSettings = {
     drawCentroid?: boolean;
     drawHitbox?: boolean;
     invisible?: boolean;
+    drawBoundingBox?:boolean;
     scale?: number;
     blur?: number;
     stroke?: {
@@ -206,6 +208,10 @@ export abstract class Shape2D {
         if (!this.drawSettings.stroke?.color.isNull()) {
             this.context.strokeStyle = this.drawSettings.stroke?.color.hexCode;
             this.context.stroke();
+        }
+
+        if(this.drawSettings.drawBoundingBox) {
+            this.drawSquareEdges();
         }
 
         if (this.drawSettings.drawEdgePoints) {

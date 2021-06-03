@@ -10,9 +10,7 @@ class App {
     debugger = new Debugger();
     private bgColor = new Color({r: 255, g: 255, b: 255});
 
-    #updateLoop: UpdateLoop = new UpdateLoop(() => {
-
-    });
+    #updateLoop: UpdateLoop = new UpdateLoop(() => {});
 
     #objects = [] as Shape2D[];
 
@@ -23,13 +21,14 @@ class App {
 
         this.#setup();
 
+        this.addToUpdateLoop(this.#objectsUpdate);
         this.addToUpdateLoop(this.#draw);
 
         this.#updateLoop.run();
     }
 
-    #setup = () => {
-        for (let i = 0; i <= 50; i++) {
+    #setup() {
+        for (let i = 0; i <= 100; i++) {
             const centerCoordinates = [
                 Math.random() * (this.#canvas.width-300) - (this.#canvas.width / 2-150),
                 Math.random() * (this.#canvas.height-300) - (this.#canvas.height / 2-150)
@@ -49,18 +48,22 @@ class App {
                 y: Math.random() * 100 - 50
             }
 
-
             this.#objects.push(tr);
         }
     }
 
+    #objectsUpdate = () => {
+        this.#objects = this.#objects.filter((o)=>{
+            if(o.offCanvas) return false;
+
+            o.rotateAnimationApply(this.#updateLoop.stats.lastFrameTime / 1000);
+            o.translationAnimationApply(this.#updateLoop.stats.lastFrameTime / 1000);
+            return true;
+        })
+    }
+
     #draw = () => {
         clearCanvas(this.#canvas);
-        // drawCoordinateSystem();
-        for (const obj of this.#objects) {
-            obj.rotateAnimationApply(this.#updateLoop.stats.lastFrameTime / 1000);
-            obj.translationAnimationApply(this.#updateLoop.stats.lastFrameTime / 1000);
-        }
         redraw(this.#objects);
     }
 
