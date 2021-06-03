@@ -32,7 +32,7 @@ export type DrawSettings = {
     drawCentroid?: boolean;
     drawHitbox?: boolean;
     invisible?: boolean;
-    drawBoundingBox?:boolean;
+    drawBoundingBox?: boolean;
     scale?: number;
     blur?: number;
     stroke?: {
@@ -151,6 +151,14 @@ export abstract class Shape2D {
         this.context = this.canvas.getContext('2d') as CanvasRenderingContext2D;
     }
 
+    get offCanvas(): boolean {
+        if (this.boudingEdges.right <= -this.canvas.width / 2) return true;
+        if (this.boudingEdges.left >= this.canvas.width / 2) return true;
+        if (this.boudingEdges.top <= -this.canvas.height / 2) return true;
+
+        return this.boudingEdges.bottom >= this.canvas.height / 2;
+    }
+
     set defaultRotation(rotation: number) {
         this.rotation.default = (rotation / 180) * Math.PI;
     }
@@ -197,7 +205,7 @@ export abstract class Shape2D {
 
     draw(): void {
 
-        if (this.offCanvas) return;
+        // if (this.offCanvas) return;
 
         this._rot_pts = this.getRotationPoints();
         this.square_edges = this.squareEdges();
@@ -205,15 +213,15 @@ export abstract class Shape2D {
         this.drawShape();
         this.context.fillStyle = this.drawSettings.fillColor.hexCode;
         this.context.fill();
-        if (!this.drawSettings.stroke?.color.isNull()) {
-            this.context.strokeStyle = this.drawSettings.stroke?.color.hexCode;
-            this.context.stroke();
-        }
-
-        if(this.drawSettings.drawBoundingBox) {
+        // if (!this.drawSettings.stroke?.color.isNull()) {
+        //     this.context.strokeStyle = this.drawSettings.stroke?.color.hexCode;
+        //     this.context.stroke();
+        // }
+        //
+        if (this.drawSettings.drawBoundingBox) {
             this.drawSquareEdges();
         }
-
+        //
         if (this.drawSettings.drawEdgePoints) {
             this.drawEdgePoints();
         }
@@ -242,9 +250,15 @@ export abstract class Shape2D {
 
     protected abstract getRotationPoints(): Point[];
 
-    abstract get boudingEdges(): { left: number, right: number, top: number, bottom: number }
-
-    abstract get offCanvas(): boolean;
+    get boudingEdges(): { left: number; right: number; top: number; bottom: number; } {
+        const xVals = this._rot_pts.map(e => e.originalCoordinates.x);
+        const yVals = this._rot_pts.map(e => e.originalCoordinates.y);
+        const minx = _.min(xVals) as number;
+        const maxx = _.max(xVals) as number;
+        const miny = _.min(yVals) as number;
+        const maxy = _.max(yVals) as number;
+        return {left: minx, right: maxx, top: maxy, bottom: miny};
+    }
 
     abstract move({x, y, z}: { x: number, y: number, z?: number }): void;
 
@@ -267,7 +281,6 @@ export abstract class Shape2D {
     }
 }
 
-
 export class Point {
 
     #drawSettings = _.cloneDeep(default_drawSettings);
@@ -282,10 +295,11 @@ export class Point {
         if (coordinates[2]) this.z = coordinates[2];
     }
 
-    translate({x, y, z}: { x: number, y: number, z?: number }) {
+    translate({x, y, z}: { x: number, y: number, z?: number }): Point {
         this.#x += x;
         this.#y += y;
         if (this.#z && z) this.#z += z;
+        return this;
     }
 
     get originalCoordinates() {
@@ -331,13 +345,15 @@ export class Point {
         ctx.closePath();
     }
 
-    setDrawSettings(drawSettings: DrawSettings) {
+    setDrawSettings(drawSettings: DrawSettings): Point {
         for (const key in drawSettings) {
             if (this.#drawSettings.hasOwnProperty(key) && drawSettings.hasOwnProperty(key)) {
                 (this.#drawSettings as any)[key] = (drawSettings as any)[key];
             }
         }
+        return this;
     }
+
 }
 
 export class Triangle extends Shape2D {
@@ -347,14 +363,6 @@ export class Triangle extends Shape2D {
         super(centroid, canvas, drawSettings);
         this.points = points;
         this._rot_pts = this.points;
-    }
-
-    get offCanvas(): boolean {
-        if (this.boudingEdges.right <= -this.canvas.width / 2) return true;
-        if (this.boudingEdges.left >= this.canvas.width / 2) return true;
-        if (this.boudingEdges.top <= -this.canvas.height / 2) return true;
-
-        return this.boudingEdges.bottom >= this.canvas.height / 2;
     }
 
     protected getRotationPoints(): [Point, Point, Point] {
@@ -416,16 +424,6 @@ export class Triangle extends Shape2D {
         throw new Error('Method not implemented.');
     }
 
-    get boudingEdges(): { left: number; right: number; top: number; bottom: number; } {
-        const xVals = this._rot_pts.map(e => e.originalCoordinates.x);
-        const yVals = this._rot_pts.map(e => e.originalCoordinates.y);
-        const minx = _.min(xVals) as number;
-        const maxx = _.max(xVals) as number;
-        const miny = _.min(yVals) as number;
-        const maxy = _.max(yVals) as number;
-        return {left: minx, right: maxx, top: maxy, bottom: miny};
-    }
-
     move(s: { x: number, y: number, z?: number }) {
         this.centroid.translate(s);
         this.points.forEach((e) => {
@@ -436,50 +434,83 @@ export class Triangle extends Shape2D {
     }
 }
 
-/*export class Rectangle extends Shape2D {
-    constructor(centroid: Point, drawSettings: DrawSettings) {
-        super(centroid, drawSettings);
+export class Rectangle extends Shape2D {
+    private triangles: [Triangle, Triangle];
+    private points: [Point, Point, Point, Point];
+
+    constructor(centroid: Point, private readonly sides: { horizontal: number, vertical: number }, protected readonly canvas: HTMLCanvasElement, drawSettings?: DrawSettings) {
+        super(centroid, canvas, drawSettings);
+        const sdHalfX = sides.horizontal / 2;
+        const sdHalfY = sides.vertical / 2;
+        const centerOriginal = this.centroid.originalCoordinates;
+        this.points = [
+            new Point([centerOriginal.x - sdHalfX, centerOriginal.y + sdHalfY]),
+            new Point([centerOriginal.x + sdHalfX, centerOriginal.y + sdHalfY]),
+            new Point([centerOriginal.x + sdHalfX, centerOriginal.y - sdHalfY]),
+            new Point([centerOriginal.x - sdHalfX, centerOriginal.y - sdHalfY])
+        ]
+        this.triangles = [
+            new Triangle([this.points[0], this.points[1], this.points[2]], this.centroid, this.canvas, drawSettings),
+            new Triangle([this.points[2], this.points[3], this.points[0]], this.centroid, this.canvas, drawSettings)
+        ]
     }
 
-    draw(): void {
+    protected getRotationPoints(): [Point, Point, Point, Point] {
+        const otp = [];
+
+        for (const pt of this.points) {
+            const vec = new Vector(this.centroid, pt);
+            otp.push(vec.rotateVector(this.rotation.default + this.rotation.added));
+        }
+
+        return otp as [Point, Point, Point, Point];
+    }
+
+    drawShape(): void {
+        for (let i = 0; i < 4; i++) {
+            this._rot_pts[i].draw(this.canvas);
+        }
+
+        this.context.beginPath();
+        this.context.moveTo(this._rot_pts[0].x, this._rot_pts[0].y);
+        for (let i = 1; i <= 3; i++) {
+            this.context.lineTo(this._rot_pts[i].x, this._rot_pts[i].y);
+        }
+        this.context.closePath();
+    }
+
+    drawEdgePoints() {
+        for (const p of this.points) {
+            p.draw(this.canvas);
+        }
     }
 
     includesPoint(pt1: Point): boolean {
-        return false;
+        return this.triangles[0].includesPoint(pt1) || this.triangles[1].includesPoint(pt1);
     }
 
     overlaps(shape: Shape2D): boolean {
         return false;
     }
 
-    squareEdges(): Array<Point> {
-        return [];
+    move({x, y, z}: { x: number; y: number; z?: number }): void {
+        this.centroid.translate({x, y, z});
+        this.points = this.points.map(e => e.translate({x, y, z})) as [Point, Point, Point, Point];
+        this.triangles = [
+            new Triangle([this.points[0], this.points[1], this.points[2]], this.centroid, this.canvas, this.drawSettings),
+            new Triangle([this.points[2], this.points[3], this.points[0]], this.centroid, this.canvas, this.drawSettings)
+        ]
     }
-
 }
 
-export class Square extends Shape2D {
-    constructor(centroid: Point, drawSettings: DrawSettings) {
-        super(centroid, drawSettings);
-    }
 
-    draw(): void {
+export class Square extends Rectangle {
+    constructor(centroid: Point, private readonly side: number, protected readonly canvas: HTMLCanvasElement, drawSettings: DrawSettings) {
+        super(centroid, {horizontal: side, vertical: side}, canvas, drawSettings);
     }
-
-    includesPoint(pt1: Point): boolean {
-        return false;
-    }
-
-    overlaps(shape: Shape2D): boolean {
-        return false;
-    }
-
-    squareEdges(): Array<Point> {
-        return [];
-    }
-
 }
 
+/*
 export class Circle extends Shape2D {
     constructor(centroid: Point, drawSettings: DrawSettings) {
         super(centroid, drawSettings);
