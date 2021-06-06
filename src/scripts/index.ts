@@ -41,7 +41,7 @@ class App {
     #setup() {
         this.#objects.push(
            this.GROUND,
-            new PhysicsObject(new Square(new Point([0, -335]), 100, this.#canvas)),
+            new PhysicsObject(new Square(new Point([0, -260]), 100, this.#canvas)),
         )
         this.#objects[1].geometry.defaultRotation = 1;
         this.#objects[1].geometry.rotationSpeed = 10;

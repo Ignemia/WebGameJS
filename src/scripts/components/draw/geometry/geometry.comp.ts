@@ -1,6 +1,11 @@
 import {Color} from '../color/color.comp';
 import _ from "lodash";
 
+// todo:    Predicting future
+//          This step comes after application of transformation and physics
+//          Create a clone of each object average frametime in the future without drawing and test these objects for overlaps
+//          If the two objects interact/overlap apply physics for interaction
+
 function getAngle(points: [Point, Point, Point]): number {
     const v = new Vector(points[1], points[0]);
     const u = new Vector(points[1], points[2]);
