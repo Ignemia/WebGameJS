@@ -47,7 +47,6 @@ export function clearCanvas(canvas: HTMLCanvasElement): void {
 
 function drawObjects(objects: PhysicsObject[]): void {
     for (const o of objects) {
-        console.log(o);
         if(o.geometry.offCanvas) continue;
         o.geometry.draw();
     }

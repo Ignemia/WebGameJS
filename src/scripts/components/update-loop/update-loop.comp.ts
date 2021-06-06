@@ -141,7 +141,9 @@ export default class UpdateLoop {
             this.#preloop.run(async () => {
                 this.#mainloop.run(async () => {
                     this.#finalloop.run(async ()=>{
-                        window.requestAnimationFrame(this.run.bind(this));
+                        window.setTimeout(()=>{
+                            window.requestAnimationFrame(this.run.bind(this));
+                        },0)
                     })
                 })
             });

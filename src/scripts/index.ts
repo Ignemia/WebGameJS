@@ -21,7 +21,7 @@ class App {
 
     #canvas = mainCanvas;
 
-    public readonly GROUND = new Physics.PhysicsObject(new Rectangle(new Point([0, -window.innerHeight / 2 + 25]), {
+    public readonly GROUND = new Physics.PhysicsObject(new Rectangle(new Point([0, -window.innerHeight / 2 + 150]), {
         horizontal: window.innerWidth,
         vertical: 50
     }, this.#canvas, {fillColor: Color.PRESETS.GREEN}), {material: Material.PRESETS.GROUND, static: true})
@@ -40,16 +40,18 @@ class App {
 
     #setup() {
         this.#objects.push(
-            this.GROUND,
-            new PhysicsObject(new Square(new Point([0, 0]), 50, this.#canvas)),
+           this.GROUND,
+            new PhysicsObject(new Square(new Point([0, -335]), 100, this.#canvas)),
         )
-        this.#objects[1].geometry.movementDefaultSpeed = {x: 0, y: 1300, z: 0}
+        this.#objects[1].geometry.defaultRotation = 1;
+        this.#objects[1].geometry.rotationSpeed = 10;
+        // this.#objects[1].geometry.movementDefaultSpeed = {x: 0, y: 1300, z: 0}
     }
 
     #applyPhysics = () => {
         for (const ob of this.#objects) {
             if(ob.options.static) continue;
-            applyGravity(ob, this.#updateLoop.stats.lastFrameTime / 1000);
+            // applyGravity(ob, this.#updateLoop.stats.lastFrameTime / 1000);
         }
     }
 
@@ -64,6 +66,7 @@ class App {
     #draw = () => {
         clearCanvas(this.#canvas);
         redraw(this.#objects);
+        this.#objects[1].geometry.overlaps(this.#objects[0].geometry);
     }
 
     addToUpdateLoop(input: (...params: any[]) => any) {
