@@ -136,16 +136,13 @@ export default class UpdateLoop {
         this.#finalloop.append(new Node(callback));
     }
 
-    run() {
+    async run() {
         if (!this.end) {
-            this.#preloop.run(() => {
-                this.#mainloop.run(() => {
-                    this.#finalloop.run(
-                        () => {
-                            // window.setTimeout(()=>{
-                                window.requestAnimationFrame(this.run.bind(this));
-                            // }, 1000)
-                        })
+            this.#preloop.run(async () => {
+                this.#mainloop.run(async () => {
+                    this.#finalloop.run(async ()=>{
+                        window.requestAnimationFrame(this.run.bind(this));
+                    })
                 })
             });
         } else {

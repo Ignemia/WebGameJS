@@ -1,24 +1,37 @@
 import UpdateLoop from './components/update-loop/update-loop.comp';
-import {clearCanvas, drawCoordinateSystem, mainCanvas, redraw} from "./components/draw/draw.comp";
-import {Color} from "./components/draw/color/color.comp";
+import {clearCanvas, mainCanvas, redraw} from "./components/draw/draw.comp";
 import Debugger from "./components/debbugger/debugger.comp";
 
 import "../styles/app.scss";
-import {Point, Rectangle, Shape2D, Square, Triangle} from "./components/draw/geometry/geometry.comp";
+import {Circle, Point, Rectangle, Square} from "./components/draw/geometry/geometry.comp";
+import {Physics} from "./components/physics/physics.comp";
+import PhysicsObject = Physics.PhysicsObject;
+import applyGravity = Physics.applyGravity;
+import Material = Physics.Material;
+import {Color} from "./components/draw/color/color.comp";
+
+// cm / px
+export const SCALE = 2;
 
 class App {
     debugger = new Debugger();
     #updateLoop: UpdateLoop = new UpdateLoop(() => {});
 
-    #objects = [] as Shape2D[];
+    #objects = [] as PhysicsObject[];
 
     #canvas = mainCanvas;
+
+    public readonly GROUND = new Physics.PhysicsObject(new Rectangle(new Point([0, -window.innerHeight / 2 + 25]), {
+        horizontal: window.innerWidth,
+        vertical: 50
+    }, this.#canvas, {fillColor: Color.PRESETS.GREEN}), {material: Material.PRESETS.GROUND, static: true})
 
     constructor() {
         document.body.appendChild(this.#canvas);
 
         this.#setup();
 
+        this.addToUpdateLoop(this.#applyPhysics);
         this.addToUpdateLoop(this.#objectsUpdate);
         this.addToUpdateLoop(this.#draw);
 
@@ -26,35 +39,25 @@ class App {
     }
 
     #setup() {
-        for (let i = 0; i <= 10; i++) {
-            const centerCoordinates = [
-                Math.random() * (this.#canvas.width-300) - (this.#canvas.width / 2-150),
-                Math.random() * (this.#canvas.height-300) - (this.#canvas.height / 2-150)
-            ];
-            const center = new Point(centerCoordinates);
-            const mag = Math.random() * 50 + 50;
+        this.#objects.push(
+            this.GROUND,
+            new PhysicsObject(new Square(new Point([0, 0]), 50, this.#canvas)),
+        )
+        this.#objects[1].geometry.movementDefaultSpeed = {x: 0, y: 1300, z: 0}
+    }
 
-            const tr = new Square(center, mag, this.#canvas, {fillColor: Color.getRandom()/*, drawBoundingBox:true, drawEdgePoints: true, drawHitbox: true, drawCentroid: true*/});
-
-            tr.defaultRotation = Math.random() * 180;
-            tr.rotationSpeed = Math.random() * 80-40;
-
-            tr.movementDefaultSpeed = {
-                x: Math.random() * 100 - 50,
-                y: Math.random() * 100 - 50
-            }
-
-            this.#objects.push(tr);
+    #applyPhysics = () => {
+        for (const ob of this.#objects) {
+            if(ob.options.static) continue;
+            applyGravity(ob, this.#updateLoop.stats.lastFrameTime / 1000);
         }
     }
 
     #objectsUpdate = () => {
-        this.#objects = this.#objects.filter((o)=>{
-            if(o.offCanvas) return false;
-
-            o.rotateAnimationApply(this.#updateLoop.stats.lastFrameTime / 1000);
-            o.translationAnimationApply(this.#updateLoop.stats.lastFrameTime / 1000);
-            return true;
+        this.#objects.forEach((o) => {
+            if (o.options.static) return;
+            o.geometry.rotateAnimationApply(this.#updateLoop.stats.lastFrameTime / 1000);
+            o.geometry.translationAnimationApply(this.#updateLoop.stats.lastFrameTime / 1000);
         })
     }
 
@@ -68,4 +71,5 @@ class App {
     }
 }
 
-(window as any)['app' as any] = new App();
+const app = new App();
+(window as any)['app'] = app;

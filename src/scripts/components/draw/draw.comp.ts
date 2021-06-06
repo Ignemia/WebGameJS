@@ -9,6 +9,8 @@
 
 import {DrawSettings, Point, Shape2D, Vector} from "./geometry/geometry.comp";
 import $ from 'jquery';
+import {Physics} from "../physics/physics.comp";
+import PhysicsObject = Physics.PhysicsObject;
 
 export const mainCanvas = generateCanvas();
 
@@ -26,7 +28,7 @@ export function drawLine(from: Point, to: Point, ctx: CanvasRenderingContext2D, 
     ctx.moveTo(from.x, from.y);
     ctx.lineTo(to.x, to.y);
     ctx.closePath();
-    ctx.strokeStyle = drawSettings?.stroke?.color.hexCode ?? "#000";
+    ctx.strokeStyle = drawSettings?.stroke?.color?.hexCode ?? "#000";
     ctx.stroke();
 }
 
@@ -43,12 +45,14 @@ export function clearCanvas(canvas: HTMLCanvasElement): void {
     // console.log("cleared");
 }
 
-function drawObjects(objects: Shape2D[]): void {
+function drawObjects(objects: PhysicsObject[]): void {
     for (const o of objects) {
-        o.draw();
+        console.log(o);
+        if(o.geometry.offCanvas) continue;
+        o.geometry.draw();
     }
 }
 
-export function redraw(objects: Shape2D[]) {
+export function redraw(objects: PhysicsObject[]) {
     drawObjects(objects);
 }
