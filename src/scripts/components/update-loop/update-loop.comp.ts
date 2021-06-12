@@ -143,7 +143,7 @@ export default class UpdateLoop {
                     this.#finalloop.run(async ()=>{
                         window.setTimeout(()=>{
                             window.requestAnimationFrame(this.run.bind(this));
-                        },0)
+                        },  0)
                     })
                 })
             });

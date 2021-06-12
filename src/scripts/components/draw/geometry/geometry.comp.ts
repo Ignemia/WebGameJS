@@ -48,7 +48,7 @@ function findOverlap(shape1: Shape2D, shape2: Shape2D) {
 
     switch (mode) {
         case modes.SAME_RECT:
-        default:
+        default: {
             if (shape1 instanceof Rectangle && shape2 instanceof Rectangle) {
                 const s1FunctionDesc = shape1.sideFunctionDescriptors;
                 const s2FunctionDesc = shape2.sideFunctionDescriptors;
@@ -56,7 +56,7 @@ function findOverlap(shape1: Shape2D, shape2: Shape2D) {
                 s1FunctionDesc.forEach((d1) => {
                     s2FunctionDesc.forEach((d2) => {
                         const crossSection = getCrosssectionPoint(d1, d2);
-                        if(shape1.boundingRectangle.includesPoints(crossSection) && shape2.boundingRectangle.includesPoints(crossSection)) {
+                        if (shape1.boundingRectangle.includesPoints(crossSection) && shape2.boundingRectangle.includesPoints(crossSection)) {
                             crossSections.push(crossSection);
                         }
                     })
@@ -65,12 +65,66 @@ function findOverlap(shape1: Shape2D, shape2: Shape2D) {
                     cs.setDrawSettings({fillColor: Color.PRESETS.RED});
                     cs.draw(shape1.getCanvas());
                 }
+                return crossSections.length > 0;
             }
             return false;
+        }
+        case modes.SAME_CIRCLE: {
+            if (shape1 instanceof Circle && shape2 instanceof Circle) {
+                return (new Vector(shape1.centerOfGravity, shape2.centerOfGravity)).magnitude >= shape1.radius + shape2.radius
+            }
+            return false;
+        }
+        case modes.SAME_TRIANGLE: {
+            if (shape1 instanceof Triangle && shape2 instanceof Triangle) {
+                const crossSections: Point[] = [];
+                shape1.sideFunctionDescriptors.forEach((d1) => {
+                    shape2.sideFunctionDescriptors.forEach((d2) => {
+                        const crossSection = getCrosssectionPoint(d1, d2);
+                        if (shape1.boundingRectangle.includesPoints(crossSection) && shape2.boundingRectangle.includesPoints(crossSection)) {
+                            crossSections.push(crossSection);
+                        }
+                    })
+                })
+                for (const cs of crossSections) {
+                    cs.setDrawSettings({fillColor: Color.PRESETS.RED});
+                    cs.draw(shape1.getCanvas());
+                }
+                return crossSections.length > 0;
+            }
+            return false;
+        }
+        case modes.C_TR: {
+            const tr = shape1 instanceof Triangle ? shape1 : shape2;
+            const c = shape1 instanceof Circle ? shape1 : shape2;
+            if (tr instanceof Triangle && c instanceof Circle) {
+                tr.vectors.forEach((e) => {
+                })
+                return false;
+            }
+            return false;
+
+        }
+        case modes.RECT_C: {
+            const rect = shape1 instanceof Rectangle ? shape1 : shape2;
+            const c = shape1 instanceof Circle ? shape1 : shape2;
+            if (rect instanceof Rectangle && c instanceof Circle) {
+
+            }
+            return false;
+        }
+        case modes.RECT_TR: {
+            const tr = shape1 instanceof Triangle ? shape1 : shape2;
+            const rect = shape1 instanceof Rectangle ? shape1 : shape2;
+            if (tr instanceof Triangle && rect instanceof Rectangle) {
+
+            }
+            return false;
+        }
     }
 }
 
-export function drawLineByEquation({a, b, canvas}: { a: number, b: number, canvas: HTMLCanvasElement }) {
+export function drawLineByEquation({a, b, canvas}: { a: number, b: number, canvas: HTMLCanvasElement }, x?: number) {
     const ctx = canvas.getContext('2d') as CanvasRenderingContext2D;
 
     const cw = canvas.width / 2;
@@ -87,25 +141,15 @@ export function drawLineByEquation({a, b, canvas}: { a: number, b: number, canva
     ctx.stroke();
 }
 
-export function getCrosssectionPoint(v1: LinearFunctionDescriptors, v2: LinearFunctionDescriptors): Point {
-
-    v2.a = v2.a !== Infinity ? v2.a : 9999999999999;
-    v1.a = v1.a !== Infinity ? v1.a : 9999999999999;
-    v2.a = v2.a !== -Infinity ? v2.a : -9999999999999;
-    v1.a = v1.a !== -Infinity ? v1.a : -9999999999999;
-
-    v2.b = v2.b !== Infinity ? v2.b : 99999999999;
-    v1.b = v1.b !== Infinity ? v1.b : 99999999999;
-    v2.b = v2.b !== -Infinity ? v2.b : -99999999999;
-    v1.b = v1.b !== -Infinity ? v1.b : -99999999999;
-
-    const x = (v1.b - v2.b) / (v2.a - v1.a);
+export function getCrosssectionPoint(v1: LinearFunctionDescriptors, v2: LinearFunctionDescriptors, xp?: number): Point {
+    const x = (v1.b - v2.b) / (v2.a - v1.a) || xp;
     return new Point([x, (v1.a * x + v1.b)]);
 }
 
 export type LinearFunctionDescriptors = {
     a: number;
     b: number;
+    x: number;
 }
 
 export type DrawSettings = {
@@ -157,7 +201,7 @@ export class BoundaryRectangle {
             (pt.originalCoordinates.x <= this.right && pt.originalCoordinates.x >= this.left));
     }
 
-    update({top, left, right, bottom}:{ top?: number, bottom?: number, left?: number, right?: number }) {
+    update({top, left, right, bottom}: { top?: number, bottom?: number, left?: number, right?: number }) {
         this.top = !top ? this.top : top;
         this.right = !right ? this.right : right;
         this.left = !left ? this.left : left;
@@ -346,7 +390,13 @@ export abstract class Shape2D {
 }
 
 export class Vector {
-    constructor(private readonly pt1: Point, private readonly pt2: Point) {
+    private _scale = 1;
+    unit;
+    normalVector;
+
+    constructor(private pt1: Point, private pt2: Point) {
+        this.unit = this.unitForm;
+        this.normalVector = this.normal;
     }
 
     get deltaX(): number {
@@ -362,21 +412,32 @@ export class Vector {
     }
 
     get equationDescription(): LinearFunctionDescriptors {
-        const otp = {
-            a: (this.pt1.originalCoordinates.y - this.pt2.originalCoordinates.y) /
-                (this.pt1.originalCoordinates.x - this.pt2.originalCoordinates.x),
-            b: 0
+        return {
+            a: -1 * this.deltaY / this.deltaX,
+            b: (this.pt1.originalCoordinates.x * this.pt2.originalCoordinates.y - this.pt2.originalCoordinates.x * this.pt1.originalCoordinates.y) / this.deltaX,
+            x: this.pt1.x
         };
-        otp.b = this.pt1.originalCoordinates.y - otp.a * this.pt1.originalCoordinates.x;
-        return otp;
     }
 
     get middlePoint() {
         return new Point([this.pt1.originalCoordinates.x + this.deltaX / 2, this.pt1.originalCoordinates.y + this.deltaY / 2]);
     }
 
+    private get unitForm(): Point {
+        return new Point([this.pt2.x + (this.deltaX / this.magnitude), this.pt2.y + (this.deltaY / this.magnitude)]);
+    }
+
+    private get normal(): Point {
+        return new Point([this.pt2.x + (this.deltaY / this.magnitude), this.pt2.y - (this.deltaX / this.magnitude)])
+    }
+
     static dotProduct(v1: Vector, v2: Vector): number {
         return (v1.deltaX * v2.deltaX) + (v1.deltaY * v2.deltaY);
+    }
+
+    scale(newScale: number) {
+        this._scale = newScale;
+        // return new Vector(this.pt2, new Point([this.pt2.originalCoordinates.x]))
     }
 
     rotateVector(amount: number, reverse = false): Point {
@@ -388,6 +449,10 @@ export class Vector {
         return new Point([pt2.originalCoordinates.x + xMovement, pt2.originalCoordinates.y + yMovement]);
     }
 
+    update(point1: Point, point2: Point) {
+        this.pt1 = point1;
+        this.pt2 = point2;
+    }
 
     draw(canvas: HTMLCanvasElement) {
         const ctx = canvas.getContext('2d') as CanvasRenderingContext2D;
@@ -457,7 +522,7 @@ export class Point {
         const ctx = canvas.getContext('2d') as CanvasRenderingContext2D;
         ctx.beginPath();
 
-        ctx.arc(Math.round(this.x), Math.round(this.y), 3, 0, 2 * Math.PI, false);
+        ctx.arc(Math.floor(this.x), Math.floor(this.y), 3, 0, 2 * Math.PI, false);
         ctx.fillStyle = this.#drawSettings.fillColor.hexCode;
         ctx.fill();
         if (!this.#drawSettings.stroke.color.isNull()) {
@@ -481,7 +546,7 @@ export class Point {
 
 export class Triangle extends Shape2D {
     points: Point[] = [];
-    private vectors: [Vector, Vector, Vector];
+    vectors: [Vector, Vector, Vector];
     shapeName = "Triangle";
 
     constructor(points: [Point, Point, Point], protected centroid: Point, protected readonly canvas: HTMLCanvasElement, drawSettings?: DrawSettings) {
@@ -489,9 +554,9 @@ export class Triangle extends Shape2D {
         this.points = points;
         this._rot_pts = this.points;
         this.vectors = [
-            new Vector(this.points[0], this.points[1]),
-            new Vector(this.points[1], this.points[2]),
-            new Vector(this.points[2], this.points[0])
+            new Vector(this._rot_pts[0], this._rot_pts[1]),
+            new Vector(this._rot_pts[1], this._rot_pts[2]),
+            new Vector(this._rot_pts[2], this._rot_pts[0])
         ]
     }
 
@@ -505,7 +570,20 @@ export class Triangle extends Shape2D {
         pts[0] = pt1Vec.rotateVector(this.rotation.default + this.rotation.added);
         pts[1] = pt2Vec.rotateVector(this.rotation.default + this.rotation.added);
         pts[2] = pt3Vec.rotateVector(this.rotation.default + this.rotation.added);
+        this.vectors = [
+            new Vector(pts[0], pts[1]),
+            new Vector(pts[1], pts[2]),
+            new Vector(pts[2], pts[0])
+        ]
         return pts as [Point, Point, Point];
+    }
+
+    get sideFunctionDescriptors(): LinearFunctionDescriptors[] {
+        return [
+            (this.vectors[0]).equationDescription,
+            (this.vectors[1]).equationDescription,
+            (this.vectors[2]).equationDescription
+        ]
     }
 
     get circumference() {
@@ -683,7 +761,7 @@ export class Square extends Rectangle {
 export class Circle extends Shape2D {
     shapeName = "Circle";
 
-    constructor(centroid: Point, private readonly radius: number, protected readonly canvas: HTMLCanvasElement, drawSettings?: DrawSettings) {
+    constructor(centroid: Point, public readonly radius: number, protected readonly canvas: HTMLCanvasElement, drawSettings?: DrawSettings) {
         super(centroid, canvas, drawSettings);
     }
 
